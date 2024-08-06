@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    command: redis-server --requirepass "TG_-WATCHER-_B0T"
+    ports:
+#      - "127.0.0.1:6666:6379"
+      - "6666:6379"
+    environment:
+      REDIS_PASSWORD: "TG_-WATCHER-_B0T"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
