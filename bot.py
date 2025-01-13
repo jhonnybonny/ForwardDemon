@@ -41,11 +41,14 @@ async def handler(event):
         sender = await event.get_sender()
         sender_name = get_display_name(sender)
 
-        # Сохраняем сообщение и информацию о пользователе в Redis
-        redis_client.set(f"message:{message_id}:original", event.message.message)
-        redis_client.set(f"message:{message_id}", event.message.message)
-        redis_client.set(f"message:{message_id}:sender", sender_name)
-        saved_message = redis_client.get(f"message:{message_id}")
+        # Сохраняем сообщение и информацию о пользователе в Redis с добавлением chat_id в ключи
+        cache_key = f"chat:{chat_id}:message:{message_id}:original"
+        sender_key = f"chat:{chat_id}:message:{message_id}:sender"
+        redis_client.set(cache_key, event.message.message)
+        redis_client.set(f"chat:{chat_id}:message:{message_id}", event.message.message)
+        redis_client.set(sender_key, sender_name)
+
+        saved_message = redis_client.get(f"chat:{chat_id}:message:{message_id}")
         logging.info(f"Message saved in Redis: {saved_message}")
 
         if sender_id != await client.get_peer_id(forward_to_chat_id):
@@ -66,8 +69,8 @@ async def handler(event):
 async def delete_handler(event):
     try:
         for msg_id in event.deleted_ids:
-            cache_key = f"message:{msg_id}:original"
-            sender_key = f"message:{msg_id}:sender"
+            cache_key = f"chat:{event.chat_id}:message:{msg_id}:original"
+            sender_key = f"chat:{event.chat_id}:message:{msg_id}:sender"
             logging.info(f"Trying to get message with key: {cache_key}")
             original_message = redis_client.get(cache_key)
             sender_name = redis_client.get(sender_key)
@@ -100,8 +103,8 @@ async def edit_handler(event):
         chat_id = event.chat_id or event.message.peer_id.user_id or event.message.peer_id.channel_id
         message_id = event.message.id
 
-        original_cache_key = f"message:{message_id}:original"
-        edited_cache_key = f"message:{message_id}"
+        original_cache_key = f"chat:{chat_id}:message:{message_id}:original"
+        edited_cache_key = f"chat:{chat_id}:message:{message_id}"
         logging.info(f"Trying to get message with key: {original_cache_key}")
         original_message_text = redis_client.get(original_cache_key)
         logging.info(f"Fetched message from Redis: {original_message_text}")
